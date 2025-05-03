@@ -4,14 +4,12 @@
 # Depends on: none
 #   
 
-# Update apt packages
+# Update packages
 - name: Update packages
   become: yes
-  apt: 
     update_cache=yes
 
-# Upgrade apt packages
+# Upgrade packages
 - name: Upgrade packages
   become: yes
-  apt: 
     upgrade=dist
