@@ -3,7 +3,10 @@
 # Run apt-get update and apt-get upgrade 
 # Depends on: none
 #   
-
+- name: patching
+   hosts: all
+   tasks:
+   
 # Update packages
 - name: Update packages
   become: yes
