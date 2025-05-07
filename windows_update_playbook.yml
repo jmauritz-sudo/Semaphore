@@ -34,8 +34,18 @@
 
   tasks:
 
-    - name: Ensure WinRM is configured
+    - name: Check if winrm is available
+      win_shell: |
+        if (Get-Command winrm -ErrorAction SilentlyContinue) {
+            Write-Output "Present"
+        } else {
+            Write-Output "Missing"
+        }
+      register: winrm_check
+
+    - name: Ensure WinRM is configured (only if winrm is installed)
       win_shell: winrm quickconfig -q
+      when: winrm_check.stdout is search("Present")
       register: winrm_config_result
       ignore_errors: yes
 
