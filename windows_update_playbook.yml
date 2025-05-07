@@ -1,0 +1,60 @@
+---
+- name: Windows Update via Scheduled Task
+  hosts: all
+  gather_facts: no
+  vars:
+    update_script_path: "C:\\Temp\\InstallUpdates.ps1"
+    update_task_name: "InstallUpdates"
+
+    update_script_content: |
+      Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Force
+
+      try {
+          & cmd.exe /c "winrm quickconfig -q"
+      } catch {
+          Write-EventLog -LogName Application -Source "PSWindowsUpdateTask" -EntryType Warning -EventId 1001 -Message "Failed to run winrm quickconfig: $($_.Exception.Message)"
+      }
+
+      try {
+          Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System" -Name "LocalAccountTokenFilterPolicy" -Value 1 -Type DWord
+      } catch {
+          Write-EventLog -LogName Application -Source "PSWindowsUpdateTask" -EntryType Warning -EventId 1002 -Message "Failed to set LocalAccountTokenFilterPolicy."
+      }
+
+      try {
+          Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Scope CurrentUser
+          Install-Module -Name PSWindowsUpdate -Force -Scope CurrentUser -AllowClobber
+      } catch {
+          Write-EventLog -LogName Application -Source "PSWindowsUpdateTask" -EntryType Error -EventId 1003 -Message "Failed to install PSWindowsUpdate: $($_.Exception.Message)"
+          exit
+      }
+
+      Import-Module PSWindowsUpdate
+      Install-WindowsUpdate -AcceptAll -AutoReboot -IgnoreReboot
+
+  tasks:
+    - name: Ensure C:\Temp exists
+      win_file:
+        path: C:\Temp
+        state: directory
+
+    - name: Copy update script to remote machine
+      win_copy:
+        content: "{{ update_script_content }}"
+        dest: "{{ update_script_path }}"
+
+    - name: Register and start scheduled task for update
+      win_scheduled_task:
+        name: "{{ update_task_name }}"
+        description: "Run PSWindowsUpdate and reboot if needed"
+        actions:
+          - path: powershell.exe
+            arguments: "-ExecutionPolicy Bypass -File '{{ update_script_path }}'"
+        triggers:
+          - type: once
+            start_boundary: "{{ ansible_date_time.iso8601 }}"
+        username: SYSTEM
+        run_level: highest
+        state: present
+        enabled: yes
+        run_now: yes
