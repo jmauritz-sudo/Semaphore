@@ -35,10 +35,14 @@
   tasks:
 
     - name: Ensure WinRM is configured
-      win_command: winrm quickconfig -q
+      win_shell: winrm quickconfig -q
       register: winrm_config_result
-      failed_when: false
-      changed_when: "'WinRM service is already running' not in winrm_config_result.stdout"
+      ignore_errors: yes
+
+    - name: Debug WinRM output (optional)
+      debug:
+        var: winrm_config_result.stdout
+      when: winrm_config_result is defined
 
     - name: Ensure C:\Temp exists
       win_file:
