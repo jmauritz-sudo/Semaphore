@@ -1,17 +1,41 @@
+- name: Windows Update via Scheduled Task
+  hosts: all
+  gather_facts: yes
+
+  vars:
+    update_script_path: "C:\\Temp\\InstallUpdates.ps1"
+    update_task_name: "InstallUpdates"
+
+    update_script_content: |
+      Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Force
+
+      try {
+          & cmd.exe /c "winrm quickconfig -q"
+      } catch {
+          Write-EventLog -LogName Application -Source "PSWindowsUpdateTask" -EntryType Warning -EventId 1001 -Message "Failed to run winrm quickconfig: $($_.Exception.Message)"
+      }
+
+      try {
+          Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System" -Name "LocalAccountTokenFilterPolicy" -Value 1 -Type DWord
+      } catch {
+          Write-EventLog -LogName Application -Source "PSWindowsUpdateTask" -EntryType Warning -EventId 1002 -Message "Failed to set LocalAccountTokenFilterPolicy."
+      }
+
+      try {
+          Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Scope CurrentUser
+          Install-Module -Name PSWindowsUpdate -Force -Scope CurrentUser -AllowClobber
+      } catch {
+          Write-EventLog -LogName Application -Source "PSWindowsUpdateTask" -EntryType Error -EventId 1003 -Message "Failed to install PSWindowsUpdate: $($_.Exception.Message)"
+          exit
+      }
+
+      Import-Module PSWindowsUpdate
+      Install-WindowsUpdate -AcceptAll -AutoReboot -IgnoreReboot
+
   tasks:
 
-    - name: Check if winrm is available
-      win_shell: |
-        if (Get-Command winrm -ErrorAction SilentlyContinue) {
-            Write-Output "Present"
-        } else {
-            Write-Output "Missing"
-        }
-      register: winrm_check
-
-    - name: Ensure WinRM is configured (only if winrm is installed)
+    - name: Ensure WinRM is configured
       win_shell: winrm quickconfig -q
-      when: winrm_check.stdout is search("Present")
       register: winrm_config_result
       ignore_errors: yes
 
