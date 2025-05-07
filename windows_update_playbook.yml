@@ -1,7 +1,7 @@
----
 - name: Windows Update via Scheduled Task
   hosts: all
   gather_facts: yes
+
   vars:
     update_script_path: "C:\\Temp\\InstallUpdates.ps1"
     update_task_name: "InstallUpdates"
@@ -33,6 +33,13 @@
       Install-WindowsUpdate -AcceptAll -AutoReboot -IgnoreReboot
 
   tasks:
+
+    - name: Ensure WinRM is configured
+      win_command: winrm quickconfig -q
+      register: winrm_config_result
+      failed_when: false
+      changed_when: "'WinRM service is already running' not in winrm_config_result.stdout"
+
     - name: Ensure C:\Temp exists
       win_file:
         path: C:\Temp
@@ -56,4 +63,3 @@
         run_level: highest
         state: present
         enabled: yes
-        run_now: yes
