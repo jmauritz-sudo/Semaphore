@@ -1,7 +1,7 @@
 ---
 - name: Windows Update via Scheduled Task
   hosts: all
-  gather_facts: no
+  gather_facts: yes
   vars:
     update_script_path: "C:\\Temp\\InstallUpdates.ps1"
     update_task_name: "InstallUpdates"
