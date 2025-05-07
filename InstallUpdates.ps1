@@ -8,7 +8,7 @@
 
     - name: Copy PowerShell script to remote host
       win_copy:
-        src: files/WinPatches.ps1
+        src: files\WinPatches.ps1
         dest: C:\Temp\WinPatches.ps1
 
     - name: Execute the PowerShell script
