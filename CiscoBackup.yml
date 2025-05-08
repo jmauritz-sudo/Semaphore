@@ -1,0 +1,16 @@
+---
+- name: Backup Cisco router startup config
+  hosts: cisco_routers
+  gather_facts: no
+  connection: network_cli
+
+  tasks:
+    - name: Backup startup-config
+      ios_command:
+        commands: show startup-config
+      register: startup_config
+
+    - name: Save backup to file
+      copy:
+        content: "{{ startup_config.stdout[0] }}"
+        dest: "backups/{{ inventory_hostname }}-startup-config-{{ ansible_date_time.date }}.cfg"
