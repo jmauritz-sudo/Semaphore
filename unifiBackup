@@ -1,0 +1,38 @@
+---
+- name: Backup UniFi Controller
+  hosts: unifi_controller
+  become: true
+  vars:
+    backup_path: "/var/lib/unifi/backups/autobackup"
+    local_backup_dir: "./unifi_backups"
+
+  tasks:
+    - name: Ensure local backup directory exists
+      local_action:
+        module: file
+        path: "{{ local_backup_dir }}"
+        state: directory
+        mode: 0755
+
+    - name: Trigger UniFi Controller backup (via CLI)
+      shell: |
+        java -jar /usr/lib/unifi/lib/ace.jar export-autobackup
+      args:
+        chdir: "/usr/lib/unifi"
+
+    - name: Find latest backup file on controller
+      find:
+        paths: "{{ backup_path }}"
+        patterns: "*.unf"
+        age: 1d
+        age_stamp: mtime
+        recurse: no
+      register: backup_files
+
+    - name: Fetch the latest backup file
+      fetch:
+        src: "{{ item.path }}"
+        dest: "{{ local_backup_dir }}/"
+        flat: yes
+      with_items: "{{ backup_files.files }}"
+      when: backup_files.files | length > 0
