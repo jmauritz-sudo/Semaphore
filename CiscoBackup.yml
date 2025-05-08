@@ -1,16 +1,17 @@
 ---
-- name: Backup Cisco router startup config
+- name: Backup Cisco Router Configuration
   hosts: cisco_routers
   gather_facts: no
-  connection: network_cli
+  vars:
+    ansible_user: "{{ router_user }}"
+    ansible_password: "{{ router_pass }}"
 
   tasks:
-    - name: Backup startup-config
-      ios_command:
-        commands: show startup-config
-      register: startup_config
+    - name: Back up running config
+      cisco.ios.ios_config:
+        backup: yes
+      register: backup_output
 
-    - name: Save backup to file
-      copy:
-        content: "{{ startup_config.stdout[0] }}"
-        dest: "backups/{{ inventory_hostname }}-startup-config-{{ ansible_date_time.date }}.cfg"
+    - name: Show where the backup is stored
+      debug:
+        msg: "Backup saved at: {{ backup_output.backup_path }}"
